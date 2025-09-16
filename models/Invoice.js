@@ -40,7 +40,7 @@ const invoiceSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-invoiceSchema.index({ number: 1 }, { unique: true });
+
 invoiceSchema.index({ userId: 1, status: 1 });
 
 // Helper to recompute totals

@@ -26,7 +26,6 @@ const courseSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-courseSchema.index({ code: 1 }, { unique: true });
 courseSchema.index({ stream: 1, active: 1 });
 
 const Course = mongoose.model('Course', courseSchema);

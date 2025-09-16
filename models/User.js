@@ -1,4 +1,3 @@
-// models/User.js
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
@@ -6,14 +5,14 @@ const userSchema = new mongoose.Schema(
   {
     firstName: { type: String, required: true, trim: true },
     lastName: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true }, // unique index here
     phone: { type: String, trim: true },
     passwordHash: { type: String, required: true, select: false },
     roles: {
       type: [String],
       enum: ['student', 'parent', 'instructor', 'admin'],
       default: ['student'],
-      index: true,
+      index: true, // keep index here
     },
     status: { type: String, enum: ['active', 'invited', 'suspended'], default: 'active' },
     profile: {
@@ -36,7 +35,6 @@ userSchema.virtual('fullName').get(function () {
 
 // Methods
 userSchema.methods.comparePassword = async function (plain) {
-  // passwordHash may not be selected; make sure to load it before compare when calling
   return bcrypt.compare(plain, this.passwordHash);
 };
 
@@ -48,7 +46,7 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-userSchema.index({ email: 1 }, { unique: true });
+// Keep only what’s needed
 userSchema.index({ status: 1 });
 
 const User = mongoose.model('User', userSchema);

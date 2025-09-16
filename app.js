@@ -30,11 +30,7 @@ app.use(express.json());
 
 // MongoDB connection
 mongoose
-  .connect(process.env.MONGO_URI, {
-    // Mongoose v6+ ignores these options, but safe to keep
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(process.env.MONGO_URI,)
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => console.error('Error connecting to MongoDB:', err));
 

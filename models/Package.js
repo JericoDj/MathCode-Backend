@@ -29,7 +29,7 @@ const packageSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-packageSchema.index({ sku: 1 }, { unique: true });
+
 packageSchema.index({ stream: 1, active: 1 });
 
 const Package = mongoose.model('Package', packageSchema);

@@ -19,7 +19,7 @@ const enrollmentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-enrollmentSchema.index({ studentId: 1, classGroupId: 1 }, { unique: true });
+
 enrollmentSchema.index({ status: 1 });
 
 const Enrollment = mongoose.model('Enrollment', enrollmentSchema);
