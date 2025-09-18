@@ -22,7 +22,15 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 const corsOptions = {
-  origin: ['https://mathcode-web.onrender.com',  'http://localhost:5173', 'http://localhost:3000', 'http://localhost:4000','http://localhost:5000', "https://math-code-web.vercel.app/" ], // Replace with your frontend URL
+  origin: [
+    'math-code-web-git-main-jericos-projects-f568a5b3.vercel.app',
+    'math-code-6ugzvxn02-jericos-projects-f568a5b3.vercel.app',
+    'https://math-code-web.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:4000',
+    'http://localhost:5000'
+  ], // Replace with your frontend URL
   credentials: true,
   optionsSuccessStatus: 200,
 };
