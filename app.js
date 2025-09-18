@@ -15,6 +15,7 @@ import enrollmentRoutes from './routes/enrollmentRoutes.js';
 import attendanceRoutes from './routes/attendanceRoutes.js';
 import invoiceRoutes from './routes/invoiceRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
+import { all } from 'axios';
 
 dotenv.config();
 
@@ -30,9 +31,10 @@ const corsOptions = {
     'http://localhost:3000',
     'http://localhost:4000',
     'http://localhost:5000'
-  ], // Replace with your frontend URL
+  ],
   credentials: true,
   optionsSuccessStatus: 200,
+  allowedHeaders: ['Content-Type', 'Authorization'], // ✅ correct key
 };
 
 // Middleware
