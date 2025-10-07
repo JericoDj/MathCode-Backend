@@ -15,6 +15,7 @@ import enrollmentRoutes from './routes/enrollmentRoutes.js';
 import attendanceRoutes from './routes/attendanceRoutes.js';
 import invoiceRoutes from './routes/invoiceRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
+import requestSessionRoutes from "./routes/requestSessionRoutes.js"
 import { all } from 'axios';
 
 dotenv.config();
@@ -24,8 +25,7 @@ const PORT = process.env.PORT || 5000;
 
 const corsOptions = {
   origin: [
-    'math-code-web-git-main-jericos-projects-f568a5b3.vercel.app',
-    'math-code-6ugzvxn02-jericos-projects-f568a5b3.vercel.app',
+
     'https://math-code-web.vercel.app',
     'http://localhost:5173',
     'http://localhost:3000',
@@ -34,7 +34,7 @@ const corsOptions = {
   ],
   credentials: true,
   optionsSuccessStatus: 200,
-  allowedHeaders: ['Content-Type', 'Authorization'], // ✅ correct key
+  allowedHeaders: ['Content-Type', 'Authorization'], 
 };
 
 // Middleware
@@ -55,15 +55,20 @@ app.get('/', (req, res) => {
   res.send('Welcome to MathCode API');
 });
 app.use('/api/users', userRoutes);
+
+app.use('/api/request-sessions', requestSessionRoutes);
+app.use('/api/sessions', sessionRoutes);
+
 app.use('/api/packages', packageRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/class-groups', classGroupRoutes);
-app.use('/api/sessions', sessionRoutes);
+
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/attendance', attendanceRoutes);
 
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/payments', paymentRoutes);
+
 
 // Error handlers
 app.use(notFound);

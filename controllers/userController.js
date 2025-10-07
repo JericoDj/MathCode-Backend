@@ -50,10 +50,10 @@ export const loginUser = async (req, res, next) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email }).select('+passwordHash');
-    if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+    if (!user) return res.status(401).json({ message: 'User is not found' });
 
     const ok = await user.comparePassword(password);
-    if (!ok) return res.status(401).json({ message: 'Invalid credentials' });
+    if (!ok) return res.status(401).json({ message: 'Invalid password' });
 
     user.lastLoginAt = new Date();
     await user.save({ validateBeforeSave: false });
