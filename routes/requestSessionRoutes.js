@@ -1,6 +1,5 @@
-// routes/requestSessionRoutes.js
 import { Router } from 'express';
-import { authRequired } from '../middleware/auth.js';
+import { authRequired, requireRoles } from '../middleware/auth.js';
 import {
   createRequestSession,
   listRequestSessions,
@@ -11,19 +10,45 @@ import {
 
 const router = Router();
 
-// Guests/Parents can request a session for their child
+// Guests or parents can create a session request
 router.post('/', authRequired, createRequestSession);
 
-// Get all session requests (can be filtered by userId, childId, status)
+// Get all session requests (parents see only their own, admins can see all)
 router.get('/', authRequired, listRequestSessions);
 
 // Get a specific session request by ID
 router.get('/:id', authRequired, getRequestSession);
 
-// Allow parent to update (e.g., reschedule or edit notes)
+// Update a request (reschedule or edit notes)
 router.patch('/:id', authRequired, updateRequestSession);
 
-// Allow parent to cancel (soft delete or remove)
+// Cancel or delete a request
 router.delete('/:id', authRequired, deleteRequestSession);
+
+/* ----- Additional admin routes ----- */
+
+// Admin: get all requests for a specific child
+router.get('/child/:childId', authRequired, requireRoles('admin'), async (req, res, next) => {
+  try {
+    const requests = await listRequestSessions({
+      query: { childId: req.params.childId },
+      userRoles: ['admin'],
+      userId: req.userId
+    });
+    res.json(requests);
+  } catch (err) { next(err); }
+});
+
+// Admin: get all requests by status
+router.get('/status/:status', authRequired, requireRoles('admin'), async (req, res, next) => {
+  try {
+    const requests = await listRequestSessions({
+      query: { status: req.params.status },
+      userRoles: ['admin'],
+      userId: req.userId
+    });
+    res.json(requests);
+  } catch (err) { next(err); }
+});
 
 export default router;
