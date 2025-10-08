@@ -18,7 +18,7 @@ export const createRequestSession = async (req, res) => {
     if (err.name === 'ValidationError') {
       return res.status(400).json({ message: err.message, errors: err.errors });
     }
-    res.status(500).json({ message: 'Server error', error: err.message });
+    res.status(500).json({  message: 'Server error', error: err.message });
   }
 };
 
