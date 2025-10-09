@@ -7,8 +7,8 @@ export const createRequestSession = async (req, res) => {
 
     const data = {
       ...req.body,
-      requestedBy: req.userId, // use userId from middleware
-      status: 'pending',       // default
+      requestedBy: req.userId,
+      status: 'pending',   
     };
 
     const doc = await SessionRequest.create(data);
