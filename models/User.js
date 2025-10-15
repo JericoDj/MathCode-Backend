@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema(
     roles: {
       type: [String],
       enum: ['student', 'parent', 'instructor', 'admin'],
-      default: ['student'],
+      default: ['parent'],
       index: true, // keep index here
     },
     status: { type: String, enum: ['active', 'invited', 'suspended'], default: 'active' },

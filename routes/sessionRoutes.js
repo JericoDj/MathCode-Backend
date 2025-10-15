@@ -7,7 +7,7 @@ import {
 
 const router = Router();
 
-router.get('/',listSessions);
+router.get('/', authRequired, listSessions);
 router.get('/:id', authRequired, getSession);
 
 router.post('/', authRequired, requireRoles('admin', 'instructor'), createSession);
