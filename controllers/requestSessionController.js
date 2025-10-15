@@ -1,4 +1,4 @@
-import SessionRequest from '../models/SessionRequest.js';
+import SessionRequest from '../models/Session.js';
 
 // Create a new session request
 export const createRequestSession = async (req, res) => {
@@ -84,7 +84,7 @@ export const updateRequestSession = async (req, res) => {
 };
 
 // Delete or cancel session request
-export const deleteRequestSession = async (req, res) => {
+export const  deleteRequestSession = async (req, res) => {
   try {
     const doc = await SessionRequest.findById(req.params.id);
     if (!doc) return res.status(404).json({ message: 'Request not found' });
