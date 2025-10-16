@@ -11,6 +11,7 @@ import packageRoutes from './routes/packageRoutes.js';
 import courseRoutes from './routes/courseRoutes.js';
 import classGroupRoutes from './routes/classGroupRoutes.js';
 import sessionRoutes from './routes/sessionRoutes.js';
+import studentRoutes from './routes/studentRoutes.js';
 import enrollmentRoutes from './routes/enrollmentRoutes.js';
 import attendanceRoutes from './routes/attendanceRoutes.js';
 import invoiceRoutes from './routes/invoiceRoutes.js';
@@ -59,6 +60,8 @@ app.use('/api/users', userRoutes);
 
 app.use('/api/request-sessions', requestSessionRoutes);
 app.use('/api/sessions', sessionRoutes);
+
+app.use('/api/students', studentRoutes);
 
 app.use('/api/packages', packageRoutes);
 app.use('/api/courses', courseRoutes);

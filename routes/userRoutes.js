@@ -8,6 +8,9 @@ import {
   listUsers,
   getUserById,
   setUserStatus,
+  changePassword,
+  requestPasswordReset,
+  resetPasswordWithOTP
 } from '../controllers/userController.js';
 import { authRequired, requireRoles } from '../middleware/auth.js';
 
@@ -25,5 +28,12 @@ router.patch('/me', authRequired, updateMe);
 router.get('/', authRequired, requireRoles('admin'), listUsers);
 router.get('/:id', authRequired, requireRoles('admin'), getUserById);
 router.patch('/:id/status', authRequired, requireRoles('admin'), setUserStatus);
+
+//ChangePass
+router.post('/change-password', authRequired, changePassword);
+
+//Passwith otp
+router.post('/forgot-password', requestPasswordReset);
+router.post('/reset-password', resetPasswordWithOTP);
 
 export default router;
