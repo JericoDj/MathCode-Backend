@@ -87,8 +87,8 @@ export const loginUser = async (req, res, next) => {
 export const getMe = async (req, res, next) => {
   try {
     const me = await User.findById(req.userId)
-      .populate('guardians', 'firstName lastName email')
-      .populate('guardianOf', 'firstName lastName email');
+      .populate('guardians', 'firstName lastName email phone school gradeLevel address')
+      .populate('guardianOf', 'firstName lastName email phone school gradeLevel address');
 
     if (!me) return res.status(404).json({ message: 'User not found' });
 

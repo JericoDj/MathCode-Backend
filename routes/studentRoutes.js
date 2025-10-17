@@ -17,7 +17,7 @@ const router = Router();
 router.post('/', authRequired, requireRoles('admin', 'instructor'), createStudent);
 
 // Update student details
-router.patch('/:id', authRequired, requireRoles('admin', 'instructor'), updateStudent);
+router.patch('/:id', authRequired, requireRoles('admin', 'instructor', "parent"), updateStudent);
 
 // Delete student
 router.delete('/:id', authRequired, requireRoles('admin'), deleteStudent);

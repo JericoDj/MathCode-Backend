@@ -16,6 +16,25 @@ const userSchema = new mongoose.Schema(
       index: true,
     },
 
+    // ✅ Added top-level address field
+    address: {
+      type: String,
+      required: false,
+      trim: true,
+    },
+
+    // ✅ School and Grade Level
+    school: {
+      type: String,
+      required: false,
+      trim: true,
+    },
+    gradeLevel: {
+      type: String, // or Number if you prefer numeric
+      required: false,
+      trim: true,
+    },
+
     status: {
       type: String,
       enum: ['active', 'invited', 'suspended'],
@@ -25,7 +44,7 @@ const userSchema = new mongoose.Schema(
     profile: {
       dob: Date,
       gender: { type: String, enum: ['male', 'female', 'other'], default: undefined },
-      address: String,
+      address: String, // optional legacy support — can remove if redundant
       timezone: { type: String, default: 'Asia/Manila' },
     },
 

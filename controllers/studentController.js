@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 /* ---------- Create Student ---------- */
 export const createStudent = async (req, res, next) => {
   try {
-    const { firstName, lastName, email, phone, password } = req.body;
+    const { firstName, lastName, email, phone, password, school, gradeLevel, address } = req.body;
 
     const existing = await User.findOne({ email });
     if (existing) return res.status(409).json({ message: 'Email already in use' });
@@ -15,6 +15,9 @@ export const createStudent = async (req, res, next) => {
       lastName,
       email,
       phone,
+      school,
+      gradeLevel,
+      address,
       roles: ['student'],
       passwordHash: password,
     });
@@ -28,7 +31,7 @@ export const createStudent = async (req, res, next) => {
 /* ---------- Update Student ---------- */
 export const updateStudent = async (req, res, next) => {
   try {
-    const allowed = ['firstName', 'lastName', 'email', 'phone', 'profile', 'status'];
+    const allowed = ['firstName', 'lastName', 'email', 'phone', 'profile', 'status', "school", "gradeLevel", "address"];
     const update = {};
     for (const k of allowed) if (k in req.body) update[k] = req.body[k];
 
@@ -72,8 +75,8 @@ export const getLinkedStudents = async (req, res, next) => {
     const { parentId } = req.params;
     const parent = await User.findById(parentId).populate('guardianOf', 'firstName lastName email status');
     if (!parent) return res.status(404).json({ message: 'Parent not found' });
-
-    res.json({ parentId: parent._id, linkedStudents: parent.guardianOf });
+    console.log(parent);
+    return res.json({ parentId: parent._id, linkedStudents: parent.guardianOf });
   } catch (err) {
     next(err);
   }
