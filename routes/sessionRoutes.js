@@ -10,8 +10,8 @@ const router = Router();
 router.get('/', authRequired, listSessions);
 router.get('/:id', authRequired, getSession);
 
-router.post('/', authRequired, requireRoles('admin', 'instructor'), createSession);
+router.post('/', authRequired, requireRoles('admin', 'instructor', "parent"), createSession);
 router.patch('/:id', authRequired, requireRoles('admin', 'instructor'), updateSession);
-router.delete('/:id', authRequired, requireRoles('admin'), deleteSession);
+router.delete('/:id', authRequired, requireRoles('admin', 'instructor', "parent"), deleteSession);
 
 export default router;

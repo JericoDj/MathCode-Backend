@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const sessionSchema = new mongoose.Schema(
   {
     // Common fields for both requested and processed sessions
-    childId: { type: String, required: false }, // child is also a User
+    childId: { type: String, required: false }, //student
     studentName: { type: String, required: false }, // <-- added student name
     requestedBy: { type: String, required: true }, // parent
 
