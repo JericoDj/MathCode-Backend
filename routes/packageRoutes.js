@@ -2,18 +2,20 @@
 import { Router } from 'express';
 import { authRequired, requireRoles } from '../middleware/auth.js';
 import {
-  createPackage, listPackages, getPackage, updatePackage, deletePackage
+  createPackage,
+  listPackages,
+  getPackage,
+  updatePackage,
+  deletePackage
 } from '../controllers/packageController.js';
 
 const router = Router();
 
-// Public list (for storefront), Admin can manage
-router.get('/', listPackages);
-router.get('/:id', listPackages, getPackage); // get by id (fallback if middleware changes)
-router.get('/:id', getPackage);
+router.get('/', authRequired, listPackages);
+router.get('/:id', authRequired, getPackage);
 
-router.post('/', authRequired, requireRoles('admin'), createPackage);
-router.patch('/:id', authRequired, requireRoles('admin'), updatePackage);
-router.delete('/:id', authRequired, requireRoles('admin'), deletePackage);
+router.post('/', authRequired, requireRoles('admin', 'instructor', 'parent'), createPackage);
+router.patch('/:id', authRequired, requireRoles('admin', 'instructor', 'parent'), updatePackage);
+router.delete('/:id', authRequired, requireRoles('admin', 'instructor', 'parent'), deletePackage);
 
 export default router;

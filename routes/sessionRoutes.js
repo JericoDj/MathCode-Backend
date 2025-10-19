@@ -1,17 +1,19 @@
-// routes/sessionRoutes.js
+// routes/packageRoutes.js
 import { Router } from 'express';
 import { authRequired, requireRoles } from '../middleware/auth.js';
 import {
-  createSession, listSessions, getSession, updateSession, deleteSession
+  createPackage, listPackages, getPackage, updatePackage, deletePackage
 } from '../controllers/sessionController.js';
 
 const router = Router();
 
-router.get('/', authRequired, listSessions);
-router.get('/:id', authRequired, getSession);
+// Public list (for storefront), Admin can manage
+router.get('/', listPackages);
+router.get('/:id', listPackages, getPackage); // get by id (fallback if middleware changes)
+router.get('/:id', getPackage);
 
-router.post('/', authRequired, requireRoles('admin', 'instructor', "parent"), createSession);
-router.patch('/:id', authRequired, requireRoles('admin', 'instructor'), updateSession);
-router.delete('/:id', authRequired, requireRoles('admin', 'instructor', "parent"), deleteSession);
+router.post('/', authRequired, requireRoles('admin'), createPackage);
+router.patch('/:id', authRequired, requireRoles('admin'), updatePackage);
+router.delete('/:id', authRequired, requireRoles('admin'), deletePackage);
 
 export default router;

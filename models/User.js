@@ -47,6 +47,10 @@ const userSchema = new mongoose.Schema(
       address: String, // optional legacy support — can remove if redundant
       timezone: { type: String, default: 'Asia/Manila' },
     },
+    credits: {
+      type: Number,
+      required: false,
+    },
 
     guardianOf: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     guardians: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

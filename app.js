@@ -16,7 +16,7 @@ import enrollmentRoutes from './routes/enrollmentRoutes.js';
 import attendanceRoutes from './routes/attendanceRoutes.js';
 import invoiceRoutes from './routes/invoiceRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
-import requestSessionRoutes from "./routes/requestSessionRoutes.js"
+
 import { all } from 'axios';
 
 dotenv.config();
@@ -58,8 +58,9 @@ app.get('/', (req, res) => {
 });
 app.use('/api/users', userRoutes);
 
-app.use('/api/request-sessions', requestSessionRoutes);
+
 app.use('/api/sessions', sessionRoutes);
+
 
 app.use('/api/students', studentRoutes);
 
