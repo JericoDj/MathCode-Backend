@@ -1,21 +1,44 @@
 import mongoose from 'mongoose';
-
+const childSchema = new mongoose.Schema({
+  _id: { type: String, required: false }, // optional manual _id
+  firstName: { type: String, required: false },
+  lastName: { type: String, required: false },
+  gradeLevel: { type: String, required: false },
+  school: { type: String, required: false },
+  email: { type: String, required: false },
+  phone: { type: String, required: false },
+  age: { type: String, required: false },
+});
 const sessionSchema = new mongoose.Schema(
   {
-    // Common fields for both requested and processed sessions
-    childId: { type: String, required: false }, //student
-    studentName: { type: String, required: false }, // <-- added student name
-    requestedBy: { type: String, required: true }, // parent
+    // Linked student (if existing)
+    childId: { type: String, required: false }, 
+    studentName: { type: String, required: false },
 
-    // For requested sessions
+    // Store full child info (for new or reference)
+    child: { type: childSchema, required: false },
+
+    // Parent who requested
+    requestedBy: { type: String, required: true }, 
+
+    // Session request details
     preferredDate: { type: Date, required: false },
     preferredTime: { type: String, required: false },
+    timezone: { type: String, required: false }, // ✅ added timezone support
     notes: { type: String, required: false },
 
-    // Status of the session
+    // Status tracking
     status: {
       type: String,
-      enum: ['pending', 'approved', 'declined', 'cancelled', 'scheduled', 'completed', 'no-show'],
+      enum: [
+  'requested_assessment', // free assessment requested
+  'pending_payment',      // package selected, awaiting payment
+  'approved',             // admin approved session (after payment or manual approval)
+  'cancelled', 
+  'scheduled', 
+  'completed', 
+  'no-show'
+],
       default: 'pending',
       required: true,
     },
