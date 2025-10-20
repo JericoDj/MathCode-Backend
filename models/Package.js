@@ -50,7 +50,7 @@ const packageSessionSchema = new mongoose.Schema({
 
 const packageSchema = new mongoose.Schema(
   {
-    // Add this field
+
     sku: {
       type: String,
       unique: true,
@@ -84,10 +84,11 @@ const packageSchema = new mongoose.Schema(
         'requested_assessment',
         'pending_payment',      
         'approved',             
-        'active',
+        'scheduled',
         'completed', 
         'cancelled', 
-        'expired'
+        'expired',
+        'no-show'
       ],
       default: 'pending_payment',
       required: false,
