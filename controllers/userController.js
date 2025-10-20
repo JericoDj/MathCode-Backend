@@ -265,3 +265,270 @@ export const resetPasswordWithOTP = async (req, res, next) => {
     next(err);
   }
 };
+
+
+// controllers/userController.js
+
+// Admin: update user
+export const updateUser = async (req, res, next) => {
+  try {
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      roles,
+      status,
+      address,
+      school,
+      gradeLevel,
+      profile,
+      credits  // Add credits here
+    } = req.body;
+
+    const updateData = {};
+    
+    // Only include fields that are provided in the request
+    if (firstName !== undefined) updateData.firstName = firstName;
+    if (lastName !== undefined) updateData.lastName = lastName;
+    if (email !== undefined) updateData.email = email;
+    if (phone !== undefined) updateData.phone = phone;
+    if (roles !== undefined) updateData.roles = roles;
+    if (status !== undefined) updateData.status = status;
+    if (address !== undefined) updateData.address = address;
+    if (school !== undefined) updateData.school = school;
+    if (gradeLevel !== undefined) updateData.gradeLevel = gradeLevel;
+    if (profile !== undefined) updateData.profile = profile;
+    if (credits !== undefined) updateData.credits = credits;  // Add this line
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { 
+        new: true, 
+        runValidators: true 
+      }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        roles: user.roles,
+        status: user.status,
+        address: user.address,
+        school: user.school,
+        gradeLevel: user.gradeLevel,
+        profile: user.profile,
+        credits: user.credits,  // Add this line to include credits in response
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+// controllers/userController.js
+
+// Deduct credits from user
+export const deductCredits = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const { amount, reason, referenceId } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ message: 'Invalid credit amount' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if user has sufficient credits
+    if (user.credits < amount) {
+      return res.status(400).json({ 
+        message: 'Insufficient credits',
+        currentCredits: user.credits,
+        requiredCredits: amount 
+      });
+    }
+
+    // Deduct credits
+    user.credits -= amount;
+    
+    // Add to transaction history
+    const transaction = {
+      type: 'debit',
+      amount: amount,
+      reason: reason || 'Credit deduction',
+      referenceId: referenceId,
+      previousBalance: user.credits + amount, // balance before deduction
+      newBalance: user.credits,
+      timestamp: new Date()
+    };
+
+    // Initialize transactions array if it doesn't exist
+    if (!user.creditTransactions) {
+      user.creditTransactions = [];
+    }
+    
+    user.creditTransactions.push(transaction);
+    await user.save();
+
+    res.json({
+      message: 'Credits deducted successfully',
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        credits: user.credits
+      },
+      transaction
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Add credits to user
+export const addCredits = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const { amount, reason, referenceId } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ message: 'Invalid credit amount' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Add credits
+    user.credits += amount;
+    
+    // Add to transaction history
+    const transaction = {
+      type: 'credit',
+      amount: amount,
+      reason: reason || 'Credit addition',
+      referenceId: referenceId,
+      previousBalance: user.credits - amount, // balance before addition
+      newBalance: user.credits,
+      timestamp: new Date()
+    };
+
+    if (!user.creditTransactions) {
+      user.creditTransactions = [];
+    }
+    
+    user.creditTransactions.push(transaction);
+    await user.save();
+
+    res.json({
+      message: 'Credits added successfully',
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        credits: user.credits
+      },
+      transaction
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Get user credit transactions
+export const getCreditTransactions = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    
+    const user = await User.findById(userId).select('creditTransactions credits firstName lastName');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        currentCredits: user.credits
+      },
+      transactions: user.creditTransactions || []
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Check if user has sufficient credits (utility function for scheduling)
+export const checkCredits = async (userId, requiredAmount) => {
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    return {
+      hasSufficientCredits: user.credits >= requiredAmount,
+      currentCredits: user.credits,
+      user: user
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Deduct credits with pre-check (for scheduling system)
+export const deductCreditsForScheduling = async (userId, amount, reason, referenceId) => {
+  try {
+    const creditCheck = await checkCredits(userId, amount);
+    
+    if (!creditCheck.hasSufficientCredits) {
+      throw new Error(`Insufficient credits. Required: ${amount}, Available: ${creditCheck.currentCredits}`);
+    }
+
+    const user = creditCheck.user;
+    user.credits -= amount;
+    
+    const transaction = {
+      type: 'debit',
+      amount: amount,
+      reason: reason,
+      referenceId: referenceId,
+      previousBalance: user.credits + amount,
+      newBalance: user.credits,
+      timestamp: new Date()
+    };
+
+    if (!user.creditTransactions) {
+      user.creditTransactions = [];
+    }
+    
+    user.creditTransactions.push(transaction);
+    await user.save();
+
+    return {
+      success: true,
+      newBalance: user.credits,
+      transaction
+    };
+  } catch (error) {
+    throw error;
+  }
+};

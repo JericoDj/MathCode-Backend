@@ -47,10 +47,39 @@ const userSchema = new mongoose.Schema(
       address: String, // optional legacy support — can remove if redundant
       timezone: { type: String, default: 'Asia/Manila' },
     },
+    
     credits: {
       type: Number,
-      required: false,
+      default: 0,
     },
+
+    // ✅ Add credit transactions array
+    creditTransactions: [{
+      type: {
+        type: String,
+        enum: ['credit', 'debit'],
+      },
+      amount: {
+        type: Number,
+        min: 0
+      },
+      reason: {
+        type: String,
+      },
+      referenceId: {
+        type: String
+      },
+      previousBalance: {
+        type: Number,
+      },
+      newBalance: {
+        type: Number,
+      },
+      timestamp: {
+        type: Date,
+        default: Date.now
+      }
+    }],
 
     guardianOf: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     guardians: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
