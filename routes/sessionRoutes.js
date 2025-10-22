@@ -40,7 +40,7 @@ router.get('/tutor/:tutorName', requireRoles('admin'), getSessionsByTutor);
 // @route   GET /api/sessions/:id
 // @desc    Get single session
 // @access  Private/Admin
-router.get('/:id', requireRoles('admin'), getSession);
+router.get('/:id', getSession);
 
 // @route   POST /api/sessions
 // @desc    Create new session

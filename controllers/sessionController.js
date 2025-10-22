@@ -428,13 +428,14 @@ function calculateCredits(duration) {
 
 // Helper function to validate status transitions
 function isValidStatusTransition(currentStatus, newStatus) {
-  const validTransitions = {
-    'scheduled': ['in-progress', 'cancelled'],
-    'in-progress': ['completed', 'cancelled'],
-    'completed': [],
-    'cancelled': ['scheduled'],
-    'no-show': []
+  // Allow any transition for admin users, but maintain logical restrictions
+  const allowedTransitions = {
+    'scheduled': ['in-progress', 'completed', 'cancelled', 'no-show'],
+    'in-progress': ['completed', 'cancelled', 'no-show', 'scheduled'],
+    'completed': ['scheduled', 'cancelled', 'no-show', 'in-progress'],
+    'cancelled': ['scheduled', 'completed', 'no-show', 'in-progress'],
+    'no-show': ['scheduled', 'completed', 'cancelled', 'in-progress']
   };
 
-  return validTransitions[currentStatus]?.includes(newStatus) || false;
+  return allowedTransitions[currentStatus]?.includes(newStatus) || false;
 }
