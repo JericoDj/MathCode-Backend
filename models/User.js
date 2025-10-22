@@ -7,7 +7,12 @@ const userSchema = new mongoose.Schema(
     lastName: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     phone: { type: String, trim: true },
-    passwordHash: { type: String, required: true, select: false },
+    passwordHash: { type: String, select: false }, // Removed required: true for Google OAuth
+
+    // Google OAuth fields
+    googleId: { type: String, sparse: true },
+    photoURL: { type: String },
+    emailVerified: { type: Boolean, default: false },
 
     roles: {
       type: [String],
@@ -30,7 +35,7 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
     gradeLevel: {
-      type: String, // or Number if you prefer numeric
+      type: String,
       required: false,
       trim: true,
     },
@@ -44,7 +49,7 @@ const userSchema = new mongoose.Schema(
     profile: {
       dob: Date,
       gender: { type: String, enum: ['male', 'female', 'other'], default: undefined },
-      address: String, // optional legacy support — can remove if redundant
+      address: String,
       timezone: { type: String, default: 'Asia/Manila' },
     },
     
@@ -53,7 +58,7 @@ const userSchema = new mongoose.Schema(
       default: 0,
     },
 
-    // ✅ Add credit transactions array
+    // ✅ Credit transactions array
     creditTransactions: [{
       type: {
         type: String,
@@ -100,12 +105,30 @@ userSchema.virtual('fullName').get(function () {
 
 /* ---------- Instance Methods ---------- */
 userSchema.methods.comparePassword = async function (plain) {
+  if (!this.passwordHash) return false; // Handle Google OAuth users without password
   return bcrypt.compare(plain, this.passwordHash);
+};
+
+// Check if user has password set (for Google OAuth users)
+userSchema.methods.hasPassword = function () {
+  return !!this.passwordHash;
+};
+
+// Check if user is Google OAuth user
+userSchema.methods.isGoogleUser = function () {
+  return !!this.googleId;
 };
 
 /* ---------- Pre-save Hook for Hashing Password ---------- */
 userSchema.pre('save', async function (next) {
-  if (!this.isModified('passwordHash')) return next();
+  // Only hash password if it's modified and not already hashed
+  if (!this.isModified('passwordHash') || !this.passwordHash) return next();
+  
+  // Check if password is already hashed (starts with bcrypt pattern)
+  if (this.passwordHash.startsWith('$2a$') || this.passwordHash.startsWith('$2b$')) {
+    return next();
+  }
+  
   const salt = await bcrypt.genSalt(10);
   this.passwordHash = await bcrypt.hash(this.passwordHash, salt);
   next();
@@ -113,6 +136,51 @@ userSchema.pre('save', async function (next) {
 
 /* ---------- Indexing ---------- */
 userSchema.index({ status: 1 });
+userSchema.index({ googleId: 1 }, { sparse: true }); // For Google OAuth
+userSchema.index({ email: 1 }); // For faster email lookups
+
+/* ---------- Static Methods ---------- */
+// Find or create Google user
+userSchema.statics.findOrCreateGoogleUser = async function(googleData) {
+  const {
+    googleId,
+    email,
+    firstName,
+    lastName,
+    photoURL,
+    emailVerified
+  } = googleData;
+
+  // Try to find by Google ID first
+  let user = await this.findOne({ googleId });
+  if (user) return user;
+
+  // Try to find by email
+  user = await this.findOne({ email });
+  if (user) {
+    // Link Google account to existing user
+    user.googleId = googleId;
+    user.photoURL = photoURL || user.photoURL;
+    user.emailVerified = emailVerified || user.emailVerified;
+    await user.save({ validateBeforeSave: false });
+    return user;
+  }
+
+  // Create new user
+  user = await this.create({
+    firstName: firstName || 'Google',
+    lastName: lastName || 'User',
+    email,
+    googleId,
+    photoURL,
+    emailVerified: emailVerified || false,
+    phone: '',
+    roles: ['parent'], // Default role
+    status: 'active'
+  });
+
+  return user;
+};
 
 const User = mongoose.model('User', userSchema);
 export default User;

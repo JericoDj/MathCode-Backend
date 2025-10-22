@@ -11,7 +11,13 @@ import {
   changePassword,
   requestPasswordReset,
   resetPasswordWithOTP,
-  updateUser 
+  updateUser,
+  // Add the new Google OAuth controllers
+  googleAuth,
+    googleAuthRedirect,
+  completeGoogleSignup,
+  setPasswordAfterGoogle,
+  googleAuthCallback
 } from '../controllers/userController.js';
 import { authRequired, requireRoles } from '../middleware/auth.js';
 
@@ -20,6 +26,14 @@ const router = Router();
 // Public
 router.post('/register', registerUser);
 router.post('/login', loginUser);
+
+// Google OAuth routes
+router.post('/auth/google', googleAuth);
+router.get('/auth/google', googleAuthRedirect); // Start OAuth flow
+router.get('/auth/google/callback', googleAuthCallback); // OAuth callback
+router.post('/auth/google/complete', completeGoogleSignup);
+router.post('/auth/google/set-password', setPasswordAfterGoogle);
+
 
 // Authenticated
 router.get('/me', authRequired, getMe);
@@ -31,10 +45,10 @@ router.get('/:id', authRequired, requireRoles('admin'), getUserById);
 router.patch('/:id', authRequired, requireRoles('admin'), updateUser); 
 router.patch('/:id/status', authRequired, requireRoles('admin'), setUserStatus);
 
-//ChangePass
+// ChangePass
 router.post('/change-password', authRequired, changePassword);
 
-//Passwith otp
+// Pass with otp
 router.post('/forgot-password', requestPasswordReset);
 router.post('/reset-password', resetPasswordWithOTP);
 

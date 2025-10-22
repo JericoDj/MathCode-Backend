@@ -5,6 +5,16 @@ import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import User from '../models/User.js';
 
+import { OAuth2Client } from 'google-auth-library';
+
+const googleClient = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.NODE_ENV === 'production' 
+    ? 'https://math-code-web.vercel.app/api/users/auth/google/callback'
+    : 'http://localhost:4000/api/users/auth/google/callback'
+);
+
 const signToken = (user) =>
   jwt.sign(
     { sub: user._id, roles: user.roles },
@@ -15,6 +25,313 @@ const signToken = (user) =>
 /* =========================================================
    AUTH + USER ACCOUNT MANAGEMENT
 ========================================================= */
+
+// Google
+
+// controllers/userController.js - Update Google OAuth functions
+
+// Redirect to Google OAuth
+export const googleAuthRedirect = async (req, res) => {
+  try {
+    const authorizeUrl = googleClient.generateAuthUrl({
+      access_type: 'offline',
+      scope: [
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/userinfo.email'
+      ],
+      prompt: 'consent',
+      redirect_uri: 'http://localhost:4000/api/users/auth/google/callback'
+    });
+    
+    res.redirect(authorizeUrl);
+  } catch (error) {
+    console.error('Google OAuth redirect error:', error);
+    res.status(500).json({ message: 'Failed to initiate Google OAuth' });
+  }
+};
+
+// OAuth callback handler
+export const googleAuthCallback = async (req, res) => {
+  try {
+    const { code } = req.query;
+    
+    if (!code) {
+      return res.redirect('http://localhost:5173?error=no_code');
+    }
+
+    // Exchange code for tokens
+    const { tokens } = await googleClient.getToken({
+      code,
+      redirect_uri: 'http://localhost:4000/api/users/auth/google/callback'
+    });
+    
+    // Verify the ID token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+
+    const payload = ticket.getPayload();
+    const {
+      sub: googleId,
+      email,
+      given_name: firstName,
+      family_name: lastName,
+      picture: photoURL,
+      email_verified: emailVerified
+    } = payload;
+
+    // Find or create user
+    let user = await User.findOne({ 
+      $or: [
+        { googleId },
+        { email }
+      ]
+    });
+
+    const isNewUser = !user;
+
+    if (!user) {
+      user = await User.create({
+        firstName: firstName || 'Google',
+        lastName: lastName || 'User',
+        email,
+        googleId,
+        photoURL,
+        emailVerified: emailVerified || false,
+        phone: '',
+        roles: ['parent'],
+        status: 'active'
+      });
+    } else {
+      if (!user.googleId) {
+        user.googleId = googleId;
+        user.photoURL = photoURL || user.photoURL;
+        user.emailVerified = emailVerified || user.emailVerified;
+        await user.save({ validateBeforeSave: false });
+      }
+    }
+
+    user.lastLoginAt = new Date();
+    await user.save({ validateBeforeSave: false });
+
+    const jwtToken = signToken(user);
+
+    // Redirect to frontend with token in URL
+    const redirectUrl = `http://localhost:5173/auth-success?token=${jwtToken}&isNewUser=${isNewUser}`;
+    res.redirect(redirectUrl);
+
+  } catch (error) {
+    console.error('Google OAuth callback error:', error);
+    res.redirect('http://localhost:5173?error=auth_failed');
+  }
+};
+
+// Direct token verification (POST endpoint)
+export const googleAuth = async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ message: 'Google token is required' });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    
+    if (!payload) {
+      return res.status(401).json({ message: 'Invalid Google token' });
+    }
+
+    const {
+      sub: googleId,
+      email,
+      given_name: firstName,
+      family_name: lastName,
+      picture: photoURL,
+      email_verified: emailVerified
+    } = payload;
+
+    // Find or create user
+    let user = await User.findOne({ 
+      $or: [
+        { googleId },
+        { email }
+      ]
+    });
+
+    if (user) {
+      if (!user.googleId) {
+        user.googleId = googleId;
+        user.photoURL = photoURL || user.photoURL;
+        user.emailVerified = emailVerified || user.emailVerified;
+        await user.save({ validateBeforeSave: false });
+      }
+
+      user.lastLoginAt = new Date();
+      await user.save({ validateBeforeSave: false });
+
+      const jwtToken = signToken(user);
+
+      return res.json({
+        user: {
+          id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
+          roles: user.roles,
+          status: user.status,
+          photoURL: user.photoURL,
+          emailVerified: user.emailVerified,
+        },
+        token: jwtToken,
+        isNewUser: false
+      });
+    }
+
+    // Create new user
+    user = await User.create({
+      firstName: firstName || 'Google',
+      lastName: lastName || 'User',
+      email,
+      googleId,
+      photoURL,
+      emailVerified: emailVerified || false,
+      phone: '',
+      roles: ['parent'],
+      status: 'active'
+    });
+
+    user.lastLoginAt = new Date();
+    await user.save({ validateBeforeSave: false });
+
+    const jwtToken = signToken(user);
+
+    return res.status(201).json({
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        roles: user.roles,
+        status: user.status,
+        photoURL: user.photoURL,
+        emailVerified: user.emailVerified,
+      },
+      token: jwtToken,
+      isNewUser: true
+    });
+
+  } catch (error) {
+    console.error('Google auth error:', error);
+    res.status(500).json({ message: 'Google authentication failed' });
+  }
+};
+// Complete Google signup with additional info (if autoCreate was false)
+export const completeGoogleSignup = async (req, res, next) => {
+  try {
+    const {
+      googleId,
+      firstName,
+      lastName,
+      email,
+      phone,
+      password,
+      roles
+    } = req.body;
+
+    // Verify the Google user data exists
+    const existingUser = await User.findOne({ googleId });
+    if (existingUser) {
+      return res.status(409).json({ message: 'User already exists with this Google account' });
+    }
+
+    // Check if email is already in use
+    const emailExists = await User.findOne({ email });
+    if (emailExists) {
+      return res.status(409).json({ message: 'Email already in use' });
+    }
+
+    const user = await User.create({
+      firstName: firstName || 'Google',
+      lastName: lastName || 'User',
+      email,
+      phone: phone || '',
+      googleId,
+      passwordHash: password, // Will be hashed by pre-save hook
+      roles: roles && roles.length ? roles : ['student'],
+      status: 'active'
+    });
+
+    user.lastLoginAt = new Date();
+    await user.save({ validateBeforeSave: false });
+
+    const jwtToken = signToken(user);
+
+    res.status(201).json({
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        roles: user.roles,
+        status: user.status,
+        photoURL: user.photoURL,
+        emailVerified: user.emailVerified,
+        hasPassword: user.hasPassword(),
+      },
+      token: jwtToken,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Set password for existing Google user (who signed up without password)
+export const setPasswordAfterGoogle = async (req, res, next) => {
+  try {
+    const { userId, password } = req.body;
+
+    if (!userId || !password) {
+      return res.status(400).json({ message: 'User ID and password are required' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!user.googleId) {
+      return res.status(400).json({ message: 'User is not a Google OAuth user' });
+    }
+
+    // Set the password
+    user.passwordHash = password; // Will be hashed by pre-save hook
+    await user.save();
+
+    res.json({
+      message: 'Password set successfully',
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        hasPassword: user.hasPassword(),
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 
 // Register
 export const registerUser = async (req, res, next) => {
@@ -532,3 +849,6 @@ export const deductCreditsForScheduling = async (userId, amount, reason, referen
     throw error;
   }
 };
+
+
+export { googleClient };
