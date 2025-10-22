@@ -439,3 +439,141 @@ function isValidStatusTransition(currentStatus, newStatus) {
 
   return allowedTransitions[currentStatus]?.includes(newStatus) || false;
 }
+
+export const getSessionsByUser = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const { 
+      page = 1, 
+      limit = 20, 
+      status,
+      startDate,
+      endDate,
+      sortBy = 'date',
+      sortOrder = 'desc'
+    } = req.query;
+
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Query for sessions where user is either student or parent
+    const query = {
+      $or: [
+        { studentId: userId },
+        { parentId: userId }
+      ]
+    };
+
+    // Apply status filter
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    // Apply date range filter
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) query.date.$gte = new Date(startDate);
+      if (endDate) query.date.$lte = new Date(endDate);
+    }
+
+    const sort = {};
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    const sessions = await Session.find(query)
+      .sort(sort)
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .populate('studentId', 'firstName lastName email phone gradeLevel school')
+      .populate('parentId', 'firstName lastName email phone');
+
+    const total = await Session.countDocuments(query);
+
+    res.json({
+      sessions,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      total,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get sessions for current user (parent or student)
+// @route   GET /api/sessions/my-sessions
+// @access  Private
+export const getMySessions = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const { 
+      page = 1, 
+      limit = 20, 
+      status,
+      startDate,
+      endDate,
+      sortBy = 'date',
+      sortOrder = 'desc'
+    } = req.query;
+
+    let query = {};
+
+    // Based on user role, determine which sessions to show
+    if (userRole === 'student') {
+      query.studentId = userId;
+    } else if (userRole === 'parent') {
+      query.parentId = userId;
+    } else {
+      // For other roles, return empty or handle differently
+      return res.json({
+        sessions: [],
+        totalPages: 0,
+        currentPage: page,
+        total: 0
+      });
+    }
+
+    // Apply status filter
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    // Apply date range filter
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) query.date.$gte = new Date(startDate);
+      if (endDate) query.date.$lte = new Date(endDate);
+    }
+
+    const sort = {};
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    const sessions = await Session.find(query)
+      .sort(sort)
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .populate('studentId', 'firstName lastName email phone gradeLevel school')
+      .populate('parentId', 'firstName lastName email phone');
+
+    const total = await Session.countDocuments(query);
+
+    res.json({
+      sessions,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      total
+    });
+  } catch (error) {
+    next(error);
+  }
+};

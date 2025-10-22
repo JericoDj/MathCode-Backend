@@ -8,7 +8,9 @@ import {
   updateSessionStatus,
   getSessionsByStudent,
   getSessionsByTutor,
-  getTodaySessions
+  getTodaySessions,
+  getSessionsByUser      
+
 } from '../controllers/sessionController.js';
 import { authRequired, requireRoles } from '../middleware/auth.js';
 
@@ -21,6 +23,7 @@ router.use(authRequired);
 // @desc    Get all sessions with filtering and pagination
 // @access  Private/Admin
 router.get('/', requireRoles('admin'), getSessions);
+
 
 // @route   GET /api/sessions/today
 // @desc    Get today's sessions
@@ -36,6 +39,11 @@ router.get('/student/:studentId', requireRoles('admin'), getSessionsByStudent);
 // @desc    Get sessions by tutor
 // @access  Private/Admin
 router.get('/tutor/:tutorName', requireRoles('admin'), getSessionsByTutor);
+
+// @route   GET /api/sessions/user/:userId
+// @desc    Get sessions by user (parent or student)
+// @access  Private/Admin
+router.get('/user/:userId', getSessionsByUser);
 
 // @route   GET /api/sessions/:id
 // @desc    Get single session
