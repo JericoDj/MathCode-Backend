@@ -7,13 +7,7 @@ import User from '../models/User.js';
 
 import { OAuth2Client } from 'google-auth-library';
 
-const googleClient = new OAuth2Client(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.NODE_ENV === 'production' 
-    ? 'https://math-code-web.vercel.app/api/users/auth/google/callback'
-    : 'http://localhost:4000/api/users/auth/google/callback'
-);
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const signToken = (user) =>
   jwt.sign(
@@ -31,40 +25,38 @@ const signToken = (user) =>
 // controllers/userController.js - Update Google OAuth functions
 
 // Redirect to Google OAuth
+// Remove the redirect-based routes since you're using frontend flow
 export const googleAuthRedirect = async (req, res) => {
-  try {
-    const authorizeUrl = googleClient.generateAuthUrl({
-      access_type: 'offline',
-      scope: [
-        'https://www.googleapis.com/auth/userinfo.profile',
-        'https://www.googleapis.com/auth/userinfo.email'
-      ],
-      prompt: 'consent',
-      redirect_uri: 'http://localhost:4000/api/users/auth/google/callback'
-    });
-    
-    res.redirect(authorizeUrl);
-  } catch (error) {
-    console.error('Google OAuth redirect error:', error);
-    res.status(500).json({ message: 'Failed to initiate Google OAuth' });
-  }
+  res.status(410).json({ message: 'This OAuth flow is deprecated. Use frontend token flow instead.' });
 };
 
+
 // OAuth callback handler
+
 export const googleAuthCallback = async (req, res) => {
   try {
-    const { code } = req.query;
-    
+    const { code, redirect_uri } = req.body;
+    console.log('🔐 Processing Google OAuth callback with code');
+
     if (!code) {
-      return res.redirect('http://localhost:5173?error=no_code');
+      return res.status(400).json({ message: 'Authorization code is required' });
     }
+
+    // You'll need to configure OAuth2Client with your client secret
+    const googleClient = new OAuth2Client(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      redirect_uri || 'http://localhost:5173'
+    );
 
     // Exchange code for tokens
     const { tokens } = await googleClient.getToken({
       code,
-      redirect_uri: 'http://localhost:4000/api/users/auth/google/callback'
+      redirect_uri: redirect_uri || 'http://localhost:5173'
     });
-    
+
+    console.log('✅ Code exchanged for tokens');
+
     // Verify the ID token
     const ticket = await googleClient.verifyIdToken({
       idToken: tokens.id_token,
@@ -72,20 +64,13 @@ export const googleAuthCallback = async (req, res) => {
     });
 
     const payload = ticket.getPayload();
-    const {
-      sub: googleId,
-      email,
-      given_name: firstName,
-      family_name: lastName,
-      picture: photoURL,
-      email_verified: emailVerified
-    } = payload;
-
-    // Find or create user
+    console.log('✅ Token verified, user payload:', payload.email);
+    
+    // Use your existing user find/create logic from googleAuth function
     let user = await User.findOne({ 
       $or: [
-        { googleId },
-        { email }
+        { googleId: payload.sub },
+        { email: payload.email }
       ]
     });
 
@@ -93,22 +78,24 @@ export const googleAuthCallback = async (req, res) => {
 
     if (!user) {
       user = await User.create({
-        firstName: firstName || 'Google',
-        lastName: lastName || 'User',
-        email,
-        googleId,
-        photoURL,
-        emailVerified: emailVerified || false,
+        firstName: payload.given_name || 'Google',
+        lastName: payload.family_name || 'User',
+        email: payload.email,
+        googleId: payload.sub,
+        photoURL: payload.picture,
+        emailVerified: payload.email_verified || false,
         phone: '',
         roles: ['parent'],
         status: 'active'
       });
+      console.log('✅ New user created:', user.email);
     } else {
       if (!user.googleId) {
-        user.googleId = googleId;
-        user.photoURL = photoURL || user.photoURL;
-        user.emailVerified = emailVerified || user.emailVerified;
+        user.googleId = payload.sub;
+        user.photoURL = payload.picture || user.photoURL;
+        user.emailVerified = payload.email_verified || user.emailVerified;
         await user.save({ validateBeforeSave: false });
+        console.log('✅ Existing user updated with Google data:', user.email);
       }
     }
 
@@ -117,16 +104,27 @@ export const googleAuthCallback = async (req, res) => {
 
     const jwtToken = signToken(user);
 
-    // Redirect to frontend with token in URL
-    const redirectUrl = `http://localhost:5173/auth-success?token=${jwtToken}&isNewUser=${isNewUser}`;
-    res.redirect(redirectUrl);
+    res.json({
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        roles: user.roles,
+        status: user.status,
+        photoURL: user.photoURL,
+        emailVerified: user.emailVerified,
+      },
+      token: jwtToken,
+      isNewUser
+    });
 
   } catch (error) {
-    console.error('Google OAuth callback error:', error);
-    res.redirect('http://localhost:5173?error=auth_failed');
+    console.error('❌ Google OAuth callback error:', error);
+    res.status(500).json({ message: 'Google authentication failed: ' + error.message });
   }
 };
-
 // Direct token verification (POST endpoint)
 export const googleAuth = async (req, res) => {
   try {

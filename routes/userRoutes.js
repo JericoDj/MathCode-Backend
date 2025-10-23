@@ -14,10 +14,10 @@ import {
   updateUser,
   // Add the new Google OAuth controllers
   googleAuth,
-    googleAuthRedirect,
   completeGoogleSignup,
+  googleAuthCallback,
   setPasswordAfterGoogle,
-  googleAuthCallback
+
 } from '../controllers/userController.js';
 import { authRequired, requireRoles } from '../middleware/auth.js';
 
@@ -28,11 +28,10 @@ router.post('/register', registerUser);
 router.post('/login', loginUser);
 
 // Google OAuth routes
-router.post('/auth/google', googleAuth);
-router.get('/auth/google', googleAuthRedirect); // Start OAuth flow
-router.get('/auth/google/callback', googleAuthCallback); // OAuth callback
+router.post('/auth/google', googleAuth); // Token-based verification
 router.post('/auth/google/complete', completeGoogleSignup);
 router.post('/auth/google/set-password', setPasswordAfterGoogle);
+router.post('/auth/google/callback', googleAuthCallback);
 
 
 // Authenticated
