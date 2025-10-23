@@ -33,7 +33,7 @@ const corsOptions = {
     'http://localhost:3000',
     'http://localhost:4000',
     'http://localhost:5000',
-     'https://accounts.google.com' 
+    
   ],
   credentials: true,
   optionsSuccessStatus: 200,

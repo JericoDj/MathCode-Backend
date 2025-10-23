@@ -9,8 +9,8 @@ const userSchema = new mongoose.Schema(
     phone: { type: String, trim: true },
     passwordHash: { type: String, select: false }, // Removed required: true for Google OAuth
 
-    // Google OAuth fields
-    googleId: { type: String, sparse: true },
+    // Google OAuth fields - REMOVED sparse: true from here
+    googleId: { type: String },
     photoURL: { type: String },
     emailVerified: { type: Boolean, default: false },
 
@@ -134,8 +134,9 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-/* ---------- Indexing ---------- */
+/* ---------- Indexing - FIXED: No duplicates ---------- */
 userSchema.index({ status: 1 });
+// Only one googleId index - using explicit index method instead of field option
 userSchema.index({ googleId: 1 }, { sparse: true }); // For Google OAuth
 userSchema.index({ email: 1 }); // For faster email lookups
 
