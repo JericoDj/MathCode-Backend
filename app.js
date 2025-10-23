@@ -6,7 +6,6 @@ import dotenv from 'dotenv';
 import userRoutes from './routes/userRoutes.js';
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 
-
 import packageRoutes from './routes/packageRoutes.js';
 import courseRoutes from './routes/courseRoutes.js';
 import classGroupRoutes from './routes/classGroupRoutes.js';
@@ -17,8 +16,6 @@ import attendanceRoutes from './routes/attendanceRoutes.js';
 import invoiceRoutes from './routes/invoiceRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 
-import { all } from 'axios';
-
 dotenv.config();
 
 const app = express();
@@ -26,14 +23,12 @@ const PORT = process.env.PORT || 4000;
 
 const corsOptions = {
   origin: [
-
     'https://math-code-web.vercel.app',
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:3000',
     'http://localhost:4000',
     'http://localhost:5000',
-    
   ],
   credentials: true,
   optionsSuccessStatus: 200,
@@ -44,43 +39,42 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-
-
-
 // MongoDB connection
 mongoose
-  .connect(process.env.MONGO_URI,)
+  .connect(process.env.MONGO_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => console.error('Error connecting to MongoDB:', err));
 
 // Routes
 app.get('/', (req, res) => {
-  res.send('Welcome to MathCode API');
+  res.json({ 
+    message: 'Welcome to MathCode API',
+    status: 'Online',
+    timestamp: new Date().toISOString()
+  });
 });
+
 app.use('/api/users', userRoutes);
-
-
 app.use('/api/sessions', sessionRoutes);
-
-
 app.use('/api/students', studentRoutes);
-
 app.use('/api/packages', packageRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/class-groups', classGroupRoutes);
-
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/attendance', attendanceRoutes);
-
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/payments', paymentRoutes);
-
 
 // Error handlers
 app.use(notFound);
 app.use(errorHandler);
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+// Export the app for Vercel serverless functions
+export default app;
+
+// Only start server if not in Vercel environment
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
+}
