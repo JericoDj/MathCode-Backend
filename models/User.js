@@ -5,11 +5,17 @@ const userSchema = new mongoose.Schema(
   {
     firstName: { type: String, required: true, trim: true },
     lastName: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    email: { 
+      type: String, 
+      required: true, 
+      unique: true, // This automatically creates an index
+      lowercase: true, 
+      trim: true 
+    },
     phone: { type: String, trim: true },
-    passwordHash: { type: String, select: false }, // Removed required: true for Google OAuth
+    passwordHash: { type: String, select: false },
 
-    // Google OAuth fields - REMOVED sparse: true from here
+    // Google OAuth fields
     googleId: { type: String },
     photoURL: { type: String },
     emailVerified: { type: Boolean, default: false },
@@ -21,14 +27,12 @@ const userSchema = new mongoose.Schema(
       index: true,
     },
 
-    // ✅ Added top-level address field
     address: {
       type: String,
       required: false,
       trim: true,
     },
 
-    // ✅ School and Grade Level
     school: {
       type: String,
       required: false,
@@ -58,7 +62,6 @@ const userSchema = new mongoose.Schema(
       default: 0,
     },
 
-    // ✅ Credit transactions array
     creditTransactions: [{
       type: {
         type: String,
@@ -91,7 +94,6 @@ const userSchema = new mongoose.Schema(
 
     lastLoginAt: Date,
 
-    /* ---------- Password Reset Fields ---------- */
     resetPasswordOTP: { type: String, select: false },
     resetPasswordExpires: { type: Date, select: false },
   },
@@ -105,26 +107,22 @@ userSchema.virtual('fullName').get(function () {
 
 /* ---------- Instance Methods ---------- */
 userSchema.methods.comparePassword = async function (plain) {
-  if (!this.passwordHash) return false; // Handle Google OAuth users without password
+  if (!this.passwordHash) return false;
   return bcrypt.compare(plain, this.passwordHash);
 };
 
-// Check if user has password set (for Google OAuth users)
 userSchema.methods.hasPassword = function () {
   return !!this.passwordHash;
 };
 
-// Check if user is Google OAuth user
 userSchema.methods.isGoogleUser = function () {
   return !!this.googleId;
 };
 
 /* ---------- Pre-save Hook for Hashing Password ---------- */
 userSchema.pre('save', async function (next) {
-  // Only hash password if it's modified and not already hashed
   if (!this.isModified('passwordHash') || !this.passwordHash) return next();
   
-  // Check if password is already hashed (starts with bcrypt pattern)
   if (this.passwordHash.startsWith('$2a$') || this.passwordHash.startsWith('$2b$')) {
     return next();
   }
@@ -136,12 +134,10 @@ userSchema.pre('save', async function (next) {
 
 /* ---------- Indexing - FIXED: No duplicates ---------- */
 userSchema.index({ status: 1 });
-// Only one googleId index - using explicit index method instead of field option
-userSchema.index({ googleId: 1 }, { sparse: true }); // For Google OAuth
-userSchema.index({ email: 1 }); // For faster email lookups
+userSchema.index({ googleId: 1 }, { sparse: true });
+// REMOVED: userSchema.index({ email: 1 }); // Email already indexed by unique: true
 
 /* ---------- Static Methods ---------- */
-// Find or create Google user
 userSchema.statics.findOrCreateGoogleUser = async function(googleData) {
   const {
     googleId,
@@ -152,14 +148,11 @@ userSchema.statics.findOrCreateGoogleUser = async function(googleData) {
     emailVerified
   } = googleData;
 
-  // Try to find by Google ID first
   let user = await this.findOne({ googleId });
   if (user) return user;
 
-  // Try to find by email
   user = await this.findOne({ email });
   if (user) {
-    // Link Google account to existing user
     user.googleId = googleId;
     user.photoURL = photoURL || user.photoURL;
     user.emailVerified = emailVerified || user.emailVerified;
@@ -167,7 +160,6 @@ userSchema.statics.findOrCreateGoogleUser = async function(googleData) {
     return user;
   }
 
-  // Create new user
   user = await this.create({
     firstName: firstName || 'Google',
     lastName: lastName || 'User',
@@ -176,7 +168,7 @@ userSchema.statics.findOrCreateGoogleUser = async function(googleData) {
     photoURL,
     emailVerified: emailVerified || false,
     phone: '',
-    roles: ['parent'], // Default role
+    roles: ['parent'],
     status: 'active'
   });
 
