@@ -33,76 +33,182 @@ export const googleAuthRedirect = async (req, res) => {
 
 // OAuth callback handler
 
-export const googleAuthCallback = async (req, res) => {
-  try {
-    const { code, redirect_uri } = req.body;
-    console.log('🔐 Processing Google OAuth callback with code');
 
-    if (!code) {
-      return res.status(400).json({ message: 'Authorization code is required' });
+// Initialize Google OAuth - returns auth URL for frontend
+export const initGoogleAuth = async (req, res) => {
+  try {
+    console.log("running initialization");
+    const { redirectUri, mode = 'login' } = req.body;
+    
+    if (!redirectUri) {
+      return res.status(400).json({ 
+        message: 'Redirect URI is required' 
+      });
     }
 
-    // You'll need to configure OAuth2Client with your client secret
-    const googleClient = new OAuth2Client(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      redirect_uri || 'http://localhost:5173'
-    );
+    // Generate state parameter for security
+    const state = crypto.randomBytes(32).toString('hex');
+    
+    // Store state in temporary session (you might want to use Redis in production)
+    req.session.oauthState = state;
+    req.session.oauthMode = mode;
+    req.session.oauthRedirectUri = redirectUri;
+
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      redirect_uri: `${process.env.BACKEND_URL}/api/users/auth/google/callback`,
+      response_type: 'code',
+      scope: 'openid profile email',
+      state: state,
+      access_type: 'offline',
+      prompt: 'consent'
+    })}`;
+
+    res.json({ 
+      authUrl,
+      state 
+    });
+  } catch (error) {
+    console.error('Google OAuth init error:', error);
+    res.status(500).json({ message: 'Failed to initialize Google OAuth' });
+  }
+};
+
+// Handle Google OAuth callback
+export const googleAuthCallback = async (req, res) => {
+  try {
+    const { code, state } = req.query;
+    const { oauthState, oauthRedirectUri, oauthMode } = req.session;
+
+    if (!code || !state) {
+      return res.redirect(`${oauthRedirectUri}?error=missing_parameters`);
+    }
+
+    if (state !== oauthState) {
+      return res.redirect(`${oauthRedirectUri}?error=invalid_state`);
+    }
 
     // Exchange code for tokens
     const { tokens } = await googleClient.getToken({
       code,
-      redirect_uri: redirect_uri || 'http://localhost:5173'
+      redirect_uri: `${process.env.BACKEND_URL}/api/users/auth/google/callback`
     });
 
-    console.log('✅ Code exchanged for tokens');
+    googleClient.setCredentials(tokens);
 
-    // Verify the ID token
+    // Get user info from Google
     const ticket = await googleClient.verifyIdToken({
       idToken: tokens.id_token,
-      audience: process.env.GOOGLE_CLIENT_ID
+      audience: process.env.GOOGLE_CLIENT_ID,
     });
 
     const payload = ticket.getPayload();
-    console.log('✅ Token verified, user payload:', payload.email);
     
-    // Use your existing user find/create logic from googleAuth function
+    if (!payload) {
+      return res.redirect(`${oauthRedirectUri}?error=invalid_token`);
+    }
+
+    const {
+      sub: googleId,
+      email,
+      given_name: firstName,
+      family_name: lastName,
+      picture: photoURL,
+      email_verified: emailVerified
+    } = payload;
+
+    // Find or create user
     let user = await User.findOne({ 
       $or: [
-        { googleId: payload.sub },
-        { email: payload.email }
+        { googleId },
+        { email }
       ]
     });
 
-    const isNewUser = !user;
+    let isNewUser = false;
 
-    if (!user) {
-      user = await User.create({
-        firstName: payload.given_name || 'Google',
-        lastName: payload.family_name || 'User',
-        email: payload.email,
-        googleId: payload.sub,
-        photoURL: payload.picture,
-        emailVerified: payload.email_verified || false,
-        phone: '',
-        roles: ['parent'],
-        status: 'active'
-      });
-      console.log('✅ New user created:', user.email);
-    } else {
+    if (user) {
       if (!user.googleId) {
-        user.googleId = payload.sub;
-        user.photoURL = payload.picture || user.photoURL;
-        user.emailVerified = payload.email_verified || user.emailVerified;
+        user.googleId = googleId;
+        user.photoURL = photoURL || user.photoURL;
+        user.emailVerified = emailVerified || user.emailVerified;
         await user.save({ validateBeforeSave: false });
-        console.log('✅ Existing user updated with Google data:', user.email);
+      }
+
+      user.lastLoginAt = new Date();
+      await user.save({ validateBeforeSave: false });
+    } else {
+      // For signup mode, create new user
+      if (oauthMode === 'signup') {
+        user = await User.create({
+          firstName: firstName || 'Google',
+          lastName: lastName || 'User',
+          email,
+          googleId,
+          photoURL,
+          emailVerified: emailVerified || false,
+          phone: '',
+          roles: ['parent'],
+          status: 'active'
+        });
+        isNewUser = true;
+      } else {
+        // For login mode, user doesn't exist
+        return res.redirect(`${oauthRedirectUri}?error=user_not_found&email=${encodeURIComponent(email)}`);
       }
     }
 
-    user.lastLoginAt = new Date();
-    await user.save({ validateBeforeSave: false });
-
+    // Generate JWT token
     const jwtToken = signToken(user);
+
+    // Redirect back to frontend with tokens
+    const redirectUrl = `${oauthRedirectUri}?${new URLSearchParams({
+      success: 'true',
+      token: jwtToken,
+      isNewUser: isNewUser.toString(),
+      userId: user._id.toString(),
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName
+    })}`;
+
+    res.redirect(redirectUrl);
+
+  } catch (error) {
+    console.error('Google OAuth callback error:', error);
+    const { oauthRedirectUri } = req.session;
+    res.redirect(`${oauthRedirectUri}?error=auth_failed`);
+  }
+};
+
+// Complete Google signup for additional user info
+export const completeGoogleSignup = async (req, res) => {
+  try {
+    const { token, phone, additionalData } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ message: 'Token is required' });
+    }
+
+    // Verify token and get user
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update user with additional info
+    if (phone) user.phone = phone;
+    if (additionalData) {
+      // Merge additional data
+      Object.assign(user, additionalData);
+    }
+
+    await user.save();
+
+    // Generate new token with updated user info
+    const newToken = signToken(user);
 
     res.json({
       user: {
@@ -116,13 +222,12 @@ export const googleAuthCallback = async (req, res) => {
         photoURL: user.photoURL,
         emailVerified: user.emailVerified,
       },
-      token: jwtToken,
-      isNewUser
+      token: newToken
     });
 
   } catch (error) {
-    console.error('❌ Google OAuth callback error:', error);
-    res.status(500).json({ message: 'Google authentication failed: ' + error.message });
+    console.error('Complete Google signup error:', error);
+    res.status(500).json({ message: 'Failed to complete signup' });
   }
 };
 
@@ -233,66 +338,9 @@ export const googleAuth = async (req, res) => {
     res.status(500).json({ message: 'Google authentication failed' });
   }
 };
-// Complete Google signup with additional info (if autoCreate was false)
-export const completeGoogleSignup = async (req, res, next) => {
-  try {
-    const {
-      googleId,
-      firstName,
-      lastName,
-      email,
-      phone,
-      password,
-      roles
-    } = req.body;
 
-    // Verify the Google user data exists
-    const existingUser = await User.findOne({ googleId });
-    if (existingUser) {
-      return res.status(409).json({ message: 'User already exists with this Google account' });
-    }
 
-    // Check if email is already in use
-    const emailExists = await User.findOne({ email });
-    if (emailExists) {
-      return res.status(409).json({ message: 'Email already in use' });
-    }
 
-    const user = await User.create({
-      firstName: firstName || 'Google',
-      lastName: lastName || 'User',
-      email,
-      phone: phone || '',
-      googleId,
-      passwordHash: password, // Will be hashed by pre-save hook
-      roles: roles && roles.length ? roles : ['student'],
-      status: 'active'
-    });
-
-    user.lastLoginAt = new Date();
-    await user.save({ validateBeforeSave: false });
-
-    const jwtToken = signToken(user);
-
-    res.status(201).json({
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        phone: user.phone,
-        roles: user.roles,
-        status: user.status,
-        photoURL: user.photoURL,
-        emailVerified: user.emailVerified,
-        hasPassword: user.hasPassword(),
-      },
-      token: jwtToken,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
 
 // Set password for existing Google user (who signed up without password)
 export const setPasswordAfterGoogle = async (req, res, next) => {

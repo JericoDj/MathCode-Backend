@@ -16,6 +16,8 @@ import attendanceRoutes from './routes/attendanceRoutes.js';
 import invoiceRoutes from './routes/invoiceRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 
+import session from 'express-session'; 
+
 dotenv.config();
 
 const app = express();
@@ -39,6 +41,19 @@ const corsOptions = {
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
+
+
+// Add Session Middleware
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-fallback-session-secret-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 15 * 60 * 1000, // 15 minutes
+    httpOnly: true
+  }
+}));
 
 // MongoDB connection
 mongoose
