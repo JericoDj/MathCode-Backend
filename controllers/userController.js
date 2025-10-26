@@ -125,6 +125,8 @@ export const googleAuthCallback = async (req, res) => {
     res.status(500).json({ message: 'Google authentication failed: ' + error.message });
   }
 };
+
+
 // Direct token verification (POST endpoint)
 export const googleAuth = async (req, res) => {
   try {
