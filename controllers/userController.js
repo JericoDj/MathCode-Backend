@@ -233,23 +233,42 @@ export const completeGoogleSignup = async (req, res) => {
 
 
 // Direct token verification (POST endpoint)
+// controllers/userController.js - Fix the googleAuth function
 export const googleAuth = async (req, res) => {
   try {
     const { token } = req.body;
 
+    console.log('Google auth request received');
+    console.log('Using GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID);
+    
     if (!token) {
       return res.status(400).json({ message: 'Google token is required' });
     }
 
-    const ticket = await googleClient.verifyIdToken({
+    // Create a new OAuth2Client instance for each request
+    const oauth2Client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    
+    const ticket = await oauth2Client.verifyIdToken({
       idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
+      audience: process.env.GOOGLE_CLIENT_ID, // This must match the token's audience
     });
 
     const payload = ticket.getPayload();
     
     if (!payload) {
       return res.status(401).json({ message: 'Invalid Google token' });
+    }
+
+    console.log('Google token verified for email:', payload.email);
+    console.log('Token audience:', payload.aud);
+    console.log('Expected audience:', process.env.GOOGLE_CLIENT_ID);
+
+    // Verify the audience matches
+    if (payload.aud !== process.env.GOOGLE_CLIENT_ID) {
+      console.error('Audience mismatch!');
+      console.error('Token was issued for:', payload.aud);
+      console.error('We expected:', process.env.GOOGLE_CLIENT_ID);
+      return res.status(401).json({ message: 'Invalid token audience' });
     }
 
     const {
@@ -261,7 +280,7 @@ export const googleAuth = async (req, res) => {
       email_verified: emailVerified
     } = payload;
 
-    // Find or create user
+    // Rest of your existing code...
     let user = await User.findOne({ 
       $or: [
         { googleId },
@@ -334,8 +353,19 @@ export const googleAuth = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Google auth error:', error);
-    res.status(500).json({ message: 'Google authentication failed' });
+    console.error('Google auth error details:', error);
+    console.error('Error message:', error.message);
+    
+    // More specific error handling
+    if (error.message.includes('Wrong recipient')) {
+      console.error('CLIENT_ID MISMATCH DETECTED');
+      console.error('Frontend is using one client ID, backend expects another');
+      return res.status(400).json({ 
+        message: 'OAuth configuration error: Client ID mismatch between frontend and backend' 
+      });
+    }
+    
+    res.status(500).json({ message: 'Google authentication failed: ' + error.message });
   }
 };
 
