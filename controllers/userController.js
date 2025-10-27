@@ -232,6 +232,8 @@ export const completeGoogleSignup = async (req, res) => {
 };
 
 
+
+
 // Direct token verification (POST endpoint)
 // controllers/userController.js - Fix the googleAuth function
 export const googleAuth = async (req, res) => {
