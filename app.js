@@ -45,7 +45,7 @@ app.use(express.json());
 
 // Add Session Middleware
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-fallback-session-secret-change-in-production',
+  secret: process.env.SESSION_SECRET || 'SECRETGOOGLESESSION',
   resave: false,
   saveUninitialized: false,
   cookie: {
