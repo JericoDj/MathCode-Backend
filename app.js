@@ -3,6 +3,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+dotenv.config();
 import userRoutes from './routes/userRoutes.js';
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 
@@ -18,10 +19,15 @@ import paymentRoutes from './routes/paymentRoutes.js';
 
 import session from 'express-session'; 
 
-dotenv.config();
+
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+
+console.log("PAYPAL ENV TEST:", {
+  CLIENT: process.env.PAYPAL_CLIENT_ID_SANDBOX,
+  SECRET: process.env.PAYPAL_SECRET_SANDBOX ? "exists" : "missing"
+});
 
 const corsOptions = {
   origin: [

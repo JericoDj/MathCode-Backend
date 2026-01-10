@@ -15,19 +15,31 @@ const paymentSchema = new mongoose.Schema({
   method: { 
     type: String, 
     enum: ['card', 'paypal', 'bank-transfer', 'gcash', 'maya', 'grabpay'],
-    required: false 
+    required: true,
   },
-  proof: { type: String, required: false },
-  fileName: { type: String, required: false },
-  fileSize: { type: Number, required: false },
-  fileType: { type: String, required: false },
-  submittedAt: { type: Date, default: Date.now },
+
+  // S3-related storage
+  proofUrl: String,
+  fileName: String,
+  fileSize: Number,
+  mimeType: String,
+
+  // Status workflow
   status: { 
     type: String, 
-    enum: ['pending', 'under_review', 'verified', 'reversed'],
-    default: 'pending'
-  }
+    enum: ['submitted', 'under_review', 'approved', 'rejected'],
+    default: 'submitted'
+  },
+
+  // Timestamps & metadata
+  submittedAt: { type: Date, default: Date.now },
+  reviewedAt: Date,
+  reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+  reviewNotes: String
 });
+
+
+
 
 const packageSessionSchema = new mongoose.Schema({
   sessionDate: { type: Date, required: false },
@@ -48,8 +60,16 @@ const packageSessionSchema = new mongoose.Schema({
   sessionNumber: { type: Number, required: false }
 });
 
+
+
+
 const packageSchema = new mongoose.Schema(
   {
+
+    tutorId: { type: String, required: false },
+
+    payment: paymentSchema,
+  tutorName: { type: String, required: false },
 
     sku: {
       type: String,
@@ -144,6 +164,9 @@ const packageSchema = new mongoose.Schema(
     
     // Individual sessions within the package
     packageSessions: [packageSessionSchema]
+
+
+    
   },
   { timestamps: true }
 );
