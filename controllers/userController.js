@@ -500,6 +500,7 @@ export const getMe = async (req, res, next) => {
       profile: me.profile,
       guardians: me.guardians,
       guardianOf: me.guardianOf,
+      credits: me.credits,
       createdAt: me.createdAt,
     });
   } catch (err) {
