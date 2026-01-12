@@ -30,57 +30,45 @@
     SECRET: process.env.PAYPAL_SECRET_SANDBOX ? "exists" : "missing"
   });
 
-  const corsOptions = {
-    origin: [
-      'https://math-code-web.vercel.app',
-      'math-code-web.vercel.app',
-
-      'https://math-code-web.vercel.app/',
-      'math-code-web.vercel.app/',
-      
-      'math-code-admin.vercel.app',
-      'math-code-admin.vercel.app/',
-      
-      'https://math-code-admin.vercel.app',
-      'https://math-code-admin.vercel.app/',
-
-
-      'https://math-code-web.netlify.app/',
-      'https://math-code-web.netlify.app',
- 
-      'math-code-web.netlify.app',
-      'math-code-web.netlify.app/',
-
-      
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'http://localhost:3000',
-      'http://localhost:4000',
-      'http://localhost:5000',
-      'https://accounts.google.com'
-      
-    ],
-    credentials: true,
-    optionsSuccessStatus: 200,
-    allowedHeaders: ['Content-Type', 'Authorization'], 
-  };
-
-  // Middleware
-  app.use(cors(corsOptions));
-  app.use(express.json());
+// CORS first (must run before session)
+const corsOptions = {
+  origin: [
+    "https://math-code-web.vercel.app",
+    "https://math-code-admin.vercel.app",
+    "https://math-code-web.netlify.app",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:3000",
+    "http://localhost:4000",
+    "http://localhost:5000",
+  ],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // allow preflight
 
 
-  // Add Session Middleware
-  app.use(session({
-    secret: process.env.SESSION_SECRET || 'SECRETGOOGLESESSION',
+// Session middleware (after CORS)
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "SECRETGOOGLESESSION",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 15 * 60 * 1000, // 15 minutes
-      httpOnly: true
-    }
-  }));
+      secure: process.env.NODE_ENV === "production", // required on Vercel
+      httpOnly: true,
+      sameSite: "none", // REQUIRED for cross-origin
+      maxAge: 15 * 60 * 1000,
+    },
+  })
+);
+
+// JSON body parser (after session)
+app.use(express.json());
+
+
 
   // MongoDB connection
   await mongoose
