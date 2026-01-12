@@ -52,6 +52,14 @@
       'math-code-web.netlify.app',
       'math-code-web.netlify.app/',
 
+      'https://mathcode.web.app',
+      'https://mathcode.web.app/',
+
+      'mathcode.firebaseapp.com',
+      'mathcode.firebaseapp.com/',
+      
+
+
       
       'http://localhost:5173',
       'http://localhost:5174',
