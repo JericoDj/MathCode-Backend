@@ -70,7 +70,7 @@ app.use(session({
 }));
 
 // MongoDB connection
-await mongoose
+mongoose
   .connect(process.env.MONGO_URI, {
     maxPoolSize: 10,
     bufferCommands: false,
