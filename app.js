@@ -57,7 +57,14 @@
 
       'mathcode.firebaseapp.com',
       'mathcode.firebaseapp.com/',
+
+
+      'https://mathcode-admin.web.app',
+      'https://mathcode-admin.web.app/',
       
+      'mathcode-admin.firebaseapp.com',
+      'mathcode-admin.firebaseapp.com/',
+
 
 
       
