@@ -48,66 +48,84 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 
-// Body parser NEXT
+// Body parser
 app.use(express.json());
 
-// --- MONGO CONNECT BEFORE SESSION STORE ---
-await mongoose
-  .connect(process.env.MONGO_URI, {
-    maxPoolSize: 10,
-    bufferCommands: false,
-  })
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.error("MongoDB Error:", err));
+// --- VERCEL SERVERLESS MONGO CACHE FIX ---
+let cached = global.mongoose;
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
 
-// --- SESSION AFTER MONGO IS READY ---
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({
-      mongoUrl: process.env.MONGO_URI,
-      ttl: 60 * 30, // 30 min
-    }),
-    cookie: {
-      secure: true, // Vercel = HTTPS
-      sameSite: "none", // Required for Netlify/Vercel cross origin
-      httpOnly: true,
-      maxAge: 15 * 60 * 1000,
-    },
-  })
-);
+async function connectDB() {
+  if (cached.conn) return cached.conn;
+  if (!cached.promise) {
+    cached.promise = mongoose
+      .connect(process.env.MONGO_URI, {
+        maxPoolSize: 10,
+        bufferCommands: false,
+      })
+      .then((m) => m);
+  }
+  cached.conn = await cached.promise;
+  return cached.conn;
+}
 
-// --- ROUTES ---
-app.get("/", (req, res) => {
-  res.json({
-    message: "Welcome to MathCode API",
-    status: "Online",
-    timestamp: new Date().toISOString(),
+// --- SESSION + ROUTES INIT ---
+async function initServer() {
+  await connectDB();
+  console.log("MongoDB ready");
+
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET,
+      resave: false,
+      saveUninitialized: false,
+      store: MongoStore.create({
+        mongoUrl: process.env.MONGO_URI,
+        ttl: 60 * 30,
+      }),
+      cookie: {
+        secure: true, // HTTPS only
+        sameSite: "none", // cross-site cookies
+        httpOnly: true,
+        maxAge: 15 * 60 * 1000,
+      },
+    })
+  );
+
+  // Routes
+  app.get("/", (req, res) => {
+    res.json({
+      message: "Welcome to MathCode API",
+      status: "Online",
+      timestamp: new Date().toISOString(),
+    });
   });
-});
 
-app.use("/api/users", userRoutes);
-app.use("/api/sessions", sessionRoutes);
-app.use("/api/students", studentRoutes);
-app.use("/api/packages", packageRoutes);
-app.use("/api/courses", courseRoutes);
-app.use("/api/class-groups", classGroupRoutes);
-app.use("/api/enrollments", enrollmentRoutes);
-app.use("/api/attendance", attendanceRoutes);
-app.use("/api/invoices", invoiceRoutes);
-app.use("/api/payments", paymentRoutes);
-app.use("/api/billing", billingRoutes);
+  app.use("/api/users", userRoutes);
+  app.use("/api/sessions", sessionRoutes);
+  app.use("/api/students", studentRoutes);
+  app.use("/api/packages", packageRoutes);
+  app.use("/api/courses", courseRoutes);
+  app.use("/api/class-groups", classGroupRoutes);
+  app.use("/api/enrollments", enrollmentRoutes);
+  app.use("/api/attendance", attendanceRoutes);
+  app.use("/api/invoices", invoiceRoutes);
+  app.use("/api/payments", paymentRoutes);
+  app.use("/api/billing", billingRoutes);
 
-// --- ERROR HANDLERS ---
-app.use(notFound);
-app.use(errorHandler);
+  // Error handlers
+  app.use(notFound);
+  app.use(errorHandler);
+}
 
-// --- EXPORT FOR SERVERLESS (VERCEL) ---
+await initServer();
+
+// Export for Vercel
 export default app;
 
-// --- LOCAL DEV SERVER ---
+// Local dev server
 if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
