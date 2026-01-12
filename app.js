@@ -30,21 +30,43 @@
     SECRET: process.env.PAYPAL_SECRET_SANDBOX ? "exists" : "missing"
   });
 
-  app.use(
-  cors({
-    origin: (origin, callback) => {
-      // allow requests with no origin (e.g. Postman, Server-to-Server)
-      if (!origin) return callback(null, true);
-      return callback(null, true);
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+  const corsOptions = {
+    origin: [
+      'https://math-code-web.vercel.app',
+      'math-code-web.vercel.app',
 
-// allow preflight auto handling
-app.options("*", cors());
+      'https://math-code-web.vercel.app/',
+      'math-code-web.vercel.app/',
+      
+      'math-code-admin.vercel.app',
+      'math-code-admin.vercel.app/',
+      
+      'https://math-code-admin.vercel.app',
+      'https://math-code-admin.vercel.app/',
+
+
+      'https://math-code-web.netlify.app/',
+      'https://math-code-web.netlify.app',
+ 
+      'math-code-web.netlify.app',
+      'math-code-web.netlify.app/',
+
+      
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:3000',
+      'http://localhost:4000',
+      'http://localhost:5000',
+      'https://accounts.google.com'
+      
+    ],
+    credentials: true,
+    optionsSuccessStatus: 200,
+    allowedHeaders: ['Content-Type', 'Authorization'], 
+  };
+
+  // Middleware
+  app.use(cors(corsOptions));
   app.use(express.json());
 
 
