@@ -71,16 +71,7 @@
 
 
   // Add Session Middleware
-  app.use(session({
-    secret: process.env.SESSION_SECRET || 'SECRETGOOGLESESSION',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 15 * 60 * 1000, // 15 minutes
-      httpOnly: true
-    }
-  }));
+  
 
   // MongoDB connection
   await mongoose
