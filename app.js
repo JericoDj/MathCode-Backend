@@ -44,6 +44,7 @@
       'https://math-code-admin.vercel.app',
       'https://math-code-admin.vercel.app/',
 
+      'https://math-code-admin.netlify.app',
 
       'https://math-code-web.netlify.app/',
       'https://math-code-web.netlify.app',

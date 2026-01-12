@@ -30,7 +30,8 @@ router.post('/login', loginUser);
 
 // Google OAuth routes
 router.post('/auth/google/init', initGoogleAuth);
-router.post('/auth/google', googleAuth); 
+router.post('/auth/google-auth', googleAuth); 
+
 router.post('/auth/google/complete', completeGoogleSignup);
 router.post('/auth/google/set-password', setPasswordAfterGoogle);
 router.post('/auth/google/callback', googleAuthCallback);
