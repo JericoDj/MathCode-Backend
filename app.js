@@ -44,6 +44,13 @@
       'https://math-code-admin.vercel.app',
       'https://math-code-admin.vercel.app/',
 
+
+      'https://math-code-web.netlify.app/',
+      'https://math-code-web.netlify.app',
+ 
+      'math-code-web.netlify.app',
+      'math-code-web.netlify.app/',
+
       
       'http://localhost:5173',
       'http://localhost:5174',
@@ -76,7 +83,7 @@
   }));
 
   // MongoDB connection
-  await mongoose
+  mongoose
   .connect(process.env.MONGO_URI, {
     maxPoolSize: 10,
     bufferCommands: false,
