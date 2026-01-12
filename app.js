@@ -53,13 +53,17 @@ app.options("*", cors(corsOptions)); // allow preflight
 // Session middleware (after CORS)
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "SECRETGOOGLESESSION",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGO_URI,
+      ttl: 60 * 30, // 30 min
+    }),
     cookie: {
-      secure: process.env.NODE_ENV === "production", // required on Vercel
+      secure: true,
+      sameSite: "none",
       httpOnly: true,
-      sameSite: "none", // REQUIRED for cross-origin
       maxAge: 15 * 60 * 1000,
     },
   })
