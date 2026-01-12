@@ -49,7 +49,6 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
-app.set('trust proxy', 1); 
 
 // Middleware
 
@@ -62,15 +61,15 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 15 * 60 * 1000
-  }
+  secure: true,
+  httpOnly: true,
+  sameSite: 'none',
+  maxAge: 15 * 60 * 1000
+}
 }));
 
 // MongoDB connection
-mongoose
+await mongoose
   .connect(process.env.MONGO_URI, {
     maxPoolSize: 10,
     bufferCommands: false,
