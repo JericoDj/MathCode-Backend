@@ -42,12 +42,17 @@ const corsOptions = {
     'http://localhost:5000',
   ],
   credentials: true,
-  optionsSuccessStatus: 200,
   allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+  optionsSuccessStatus: 200,
 };
 
-// Middleware
 app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+app.set('trust proxy', 1); 
+
+// Middleware
+
 app.use(express.json());
 
 
@@ -57,11 +62,11 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-  secure: true,
-  httpOnly: true,
-  sameSite: 'none',
-  maxAge: 15 * 60 * 1000
-}
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 15 * 60 * 1000
+  }
 }));
 
 // MongoDB connection
