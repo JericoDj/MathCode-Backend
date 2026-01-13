@@ -42,7 +42,7 @@
       
       'math-code-admin.vercel.app',
       'math-code-admin.vercel.app/',
-      
+    
       'https://math-code-admin.vercel.app',
       'https://math-code-admin.vercel.app/',
 
@@ -67,9 +67,6 @@
       'mathcode-admin.firebaseapp.com',
       'mathcode-admin.firebaseapp.com/',
 
-
-
-      
       'http://localhost:5173',
       'http://localhost:5174',
       'http://localhost:3000',
