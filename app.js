@@ -16,6 +16,8 @@
   import attendanceRoutes from './routes/attendanceRoutes.js';
   import invoiceRoutes from './routes/invoiceRoutes.js';
   import paymentRoutes from './routes/paymentRoutes.js';
+  import inquiryRoutes from './routes/inquiryRoutes.js';
+
 
   import billingRoutes from "./routes/billingRoutes.js";
   import session from 'express-session'; 
@@ -117,6 +119,7 @@
   app.use('/api/invoices', invoiceRoutes);
   app.use('/api/payments', paymentRoutes);
   app.use("/api/billing", billingRoutes);
+  app.use('/api/inquiries', inquiryRoutes);
 
   // Error handlers
   app.use(notFound);
