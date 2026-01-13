@@ -2,6 +2,8 @@
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+  dotenv.config();
+
 
 export const submitInquiry = async (req, res, next) => {
   try {
