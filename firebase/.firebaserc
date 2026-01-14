@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "mathcode-1c100",
+    "prod": "mathcode-1c100"
+  },
+  "targets": {},
+  "etags": {}
+}

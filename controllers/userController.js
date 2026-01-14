@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import User from '../models/User.js';
+import { request as httpsRequest } from "https";
 
 import { OAuth2Client } from 'google-auth-library';
 
@@ -548,33 +549,52 @@ export const changePassword = async (req, res, next) => {
 export const requestPasswordReset = async (req, res, next) => {
   try {
     const { email } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
-    const hashedOTP = crypto.createHash('sha256').update(otp).digest('hex');
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
 
     user.resetPasswordOTP = hashedOTP;
-    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 mins
+    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
     await user.save({ validateBeforeSave: false });
 
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+    // CALL CLOUD FUNCTION
+    const fnURL = new URL("https://us-central1-mathcode-1c100.cloudfunctions.net/sendOTP");
+    const payload = JSON.stringify({ email, otp });
+
+    const options = {
+      method: "POST",
+      hostname: fnURL.hostname,
+      path: fnURL.pathname,
+      port: 443,
+      timeout: 8000,
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(payload),
       },
+    };
+
+    await new Promise((resolve, reject) => {
+      const reqCF = httpsRequest(options, (resCF) => {
+        let data = "";
+        resCF.on("data", (chunk) => (data += chunk));
+        resCF.on("end", () => resolve(data));
+      });
+
+      reqCF.on("error", reject);
+      reqCF.on("timeout", () => reject(new Error("Cloud Function timeout")));
+      reqCF.write(payload);
+      reqCF.end();
     });
 
-    await transporter.sendMail({
-      from: `"Support" <${process.env.EMAIL_USER}>`,
-      to: user.email,
-      subject: 'Your OTP Code for Password Reset',
-      text: `Your password reset code is: ${otp}\n\nThis code will expire in 10 minutes.`,
-    });
+    return res.json({ message: "OTP sent to email" });
 
-    res.json({ message: 'OTP sent to your email' });
   } catch (err) {
+    console.error("Password reset OTP failed:", err.message);
     next(err);
   }
 };
