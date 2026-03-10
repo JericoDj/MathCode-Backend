@@ -1,6 +1,7 @@
 // routes/paymentRoutes.js
 import { Router } from 'express';
 import { authRequired, requireRoles } from '../middleware/auth.js';
+import { paymentLimiter } from '../middleware/rateLimiter.js';
 import {
   createPayment, listPayments, getPayment, refundPayment
 } from '../controllers/paymentController.js';
@@ -23,8 +24,8 @@ router.post('/:id/refund', authRequired, requireRoles('admin'), refundPayment);
 
 // Paypall
 
-router.post('/paypal/create', authRequired, createPayPalOrder);
-router.post('/paypal/capture', authRequired, capturePayPalOrder);
+router.post('/paypal/create', authRequired, paymentLimiter, createPayPalOrder);
+router.post('/paypal/capture', authRequired, paymentLimiter, capturePayPalOrder);
 router.post('/paypal/config', authRequired, requireRoles('admin'), setPayPalConfig);
 router.get('/paypal/config', authRequired, requireRoles('admin'), getPayPalConfig);
 

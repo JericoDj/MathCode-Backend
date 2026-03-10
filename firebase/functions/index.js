@@ -1,21 +1,17 @@
-// functions/src/index.js
 import { onRequest } from "firebase-functions/v2/https";
 import { submitInquiryFn } from "./controllers/inquiryController.js";
 import { sendOTPFn } from "./controllers/authController.js";
+import { subscribeEmailFn } from "./controllers/subscribeController.js";
 
-/* ============ TEST FUNCTION ============ */
 export const testFunction = onRequest(
   { cors: true },
-  async (req, res) => {
-    return res.json({
-      success: true,
-      message: "testFunction OK",
-      time: new Date().toISOString(),
-    });
-  }
+  async (_req, res) => res.json({
+    success: true,
+    message: "testFunction OK",
+    time: new Date().toISOString(),
+  })
 );
 
-/* ============ PROD FUNCTIONS ============ */
 export const submitInquiry = onRequest(
   {
     cors: true,
@@ -30,4 +26,12 @@ export const sendOTP = onRequest(
     secrets: ["EMAIL_USER", "EMAIL_PASS", "SUPPORT_EMAIL"],
   },
   sendOTPFn
+);
+
+export const subscribeEmail = onRequest(
+  {
+    cors: true,
+    secrets: ["EMAIL_USER", "EMAIL_PASS", "SUPPORT_EMAIL"],
+  },
+  subscribeEmailFn
 );

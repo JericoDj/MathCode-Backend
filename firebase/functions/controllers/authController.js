@@ -7,6 +7,7 @@ export async function sendOTPFn(req, res) {
 
     await transporter.sendMail({
       from: `"MathCode OTP" <${SUPPORT_EMAIL.value()}>`,
+      cc: SUPPORT_EMAIL,
       to: email,
       subject: "Your OTP Code",
       html: `
